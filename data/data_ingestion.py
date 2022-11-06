@@ -97,7 +97,3 @@ if __name__ == "__main__":
         ]
 
     load_table_uri_csv(table_name, schema)
-
-
-
-

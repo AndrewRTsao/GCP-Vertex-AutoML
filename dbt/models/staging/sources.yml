@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+- name: Azure_VM
+  description: Where the Kaggle datasets have been loaded (refer to data_ingestion.py)
+  schema: Azure_VM
+  tables:
+    - name: PdM_errors
+      description: A history of all errors, not failures, encountered by each machine while in operation condition. Rounded to the nearest hour.
+    - name: PdM_failures
+      description: A history of all replacements of a component in a machine due to a recorded failure. Rounded to the nearest hour.
+    - name: PdM_machines
+      description: Lookup table of all machines, containing the model type and age of each machine by years in service
+    - name: PdM_maint
+      description: Fact table containing all components that have been replaced in a machine, either due to scheduled maintenance or because a machine has broken down. Rounded to the nearest hour.
+    - name: PdM_telemetry
+      description: Sensor data of over 100 machines, collected in real time, containing hourly averages of voltage, rotation, pressure, and vibration over the span of a year. Rounded to the nearest hour.
