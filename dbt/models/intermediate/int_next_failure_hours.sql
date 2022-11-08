@@ -1,9 +1,3 @@
-{{
-  config(
-    materialized = 'table'
-  )
-}}
-
 with failures as (
 
     select * from {{ ref('vm_failures') }}
@@ -23,10 +17,10 @@ joined as (
     ts,
 
     (select min(ts) from failures where machine_id = telemetry.machine_id and ts >= telemetry.ts) as next_failure,
-    (select min(ts) from failures where machine_id = telemetry.machine_id and ts >= telemetry.ts and comp1_failure > 0) as next_comp1_failure,
-    (select min(ts) from failures where machine_id = telemetry.machine_id and ts >= telemetry.ts and comp2_failure > 0) as next_comp2_failure,
-    (select min(ts) from failures where machine_id = telemetry.machine_id and ts >= telemetry.ts and comp3_failure > 0) as next_comp3_failure,
-    (select min(ts) from failures where machine_id = telemetry.machine_id and ts >= telemetry.ts and comp4_failure > 0) as next_comp4_failure
+    (select min(ts) from failures where machine_id = telemetry.machine_id and ts >= telemetry.ts and comp1_failure is true) as next_comp1_failure,
+    (select min(ts) from failures where machine_id = telemetry.machine_id and ts >= telemetry.ts and comp2_failure is true) as next_comp2_failure,
+    (select min(ts) from failures where machine_id = telemetry.machine_id and ts >= telemetry.ts and comp3_failure is true) as next_comp3_failure,
+    (select min(ts) from failures where machine_id = telemetry.machine_id and ts >= telemetry.ts and comp4_failure is true) as next_comp4_failure
 
   from telemetry
 

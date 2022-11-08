@@ -3,7 +3,8 @@ version: 2
 sources:
 - name: Azure_VM
   description: Where the Kaggle datasets have been loaded (refer to data_ingestion.py)
-  schema: Azure_VM
+  schema: "{{ env_var('DATASET_NAME') }}"
+  database: "{{ env_var('GOOGLE_CLOUD_PROJECT') }}"
   tables:
     - name: PdM_errors
       description: A history of all errors, not failures, encountered by each machine while in operation condition. Rounded to the nearest hour.

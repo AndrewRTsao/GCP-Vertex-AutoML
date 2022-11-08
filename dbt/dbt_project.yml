@@ -40,6 +40,4 @@ clean-targets:         # directories to be removed by `dbt clean`
 # Specifying materializations and addint metadata
 models:
   azure_vm:
-    materiialized: view
-    staging:
-      materialized: table
+    materialized: table

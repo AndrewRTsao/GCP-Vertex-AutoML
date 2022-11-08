@@ -1,9 +1,3 @@
-{{
-  config(
-    materialized = 'table'
-  )
-}}
-
 with next_failures as (
 
     select * from {{ ref('int_next_failure_hours') }}
@@ -36,8 +30,8 @@ final as (
 
       case 
         when ts < '{{ var("train_end") }}' and ts >= '{{ var("train_start") }}'  then 'TRAIN'
-			  when ts < '{{ var("vali_end") }}'  and ts >= '{{ var("vali_start") }}'  then 'VALIDATE'
-			  else 'TEST'
+        when ts < '{{ var("vali_end") }}'  and ts >= '{{ var("vali_start") }}'  then 'VALIDATE'
+        else 'TEST'
       end as split
 
     from next_failures

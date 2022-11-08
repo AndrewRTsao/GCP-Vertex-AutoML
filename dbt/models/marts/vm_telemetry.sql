@@ -1,17 +1,3 @@
-{{
- config(
-   meta = {
-     "continual": {
-       "type": "FeatureSet",
-       "name": "vm_machine_telemetry",
-       "entity": "azure_vm",
-       "index": "machine_id",
-       "time_index": "ts"
-     }
-   }
- ) 
-}}
-
 with telemetry as (
 
     select * from {{ ref('stg_telemetry') }}

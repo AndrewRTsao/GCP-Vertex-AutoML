@@ -3,7 +3,7 @@ def create_dataset(dataset_id):
     # Construct full Dataset object from client to send to the API
     dataset_ref = bigquery.DatasetReference.from_string(dataset_id, default_project=client.project)
     dataset = bigquery.Dataset(dataset_ref)
-    dataset.location = "US"
+    dataset.location = os.getenv('DATASET_LOCATION')
 
     # Send the dataset to the API for creation, with an explicit timeout.
     # Raises google.api_core.exceptions.Conflict if the Dataset already
@@ -15,7 +15,7 @@ def create_dataset(dataset_id):
 def load_table_uri_csv(table_name: str, schema: object):
 
     # Creating fully qualified table name
-    table_id = GCP_PROJECT + ".Azure_VM." + table_name
+    table_id = GCP_PROJECT + "." + dataset_id + "." + table_name
 
     # Defining job config for loading data from GCS into BQ table
     job_config = bigquery.LoadJobConfig(
@@ -25,7 +25,7 @@ def load_table_uri_csv(table_name: str, schema: object):
     )
     uri = GCS_PATH + table_name + ".csv" # Path where file is stored on GCS bucket
 
-    # Lodating data into BQ table from GCS bucket
+    # Loading data into BQ table from GCS bucket
     load_job = client.load_table_from_uri(
         uri, table_id, job_config=job_config
     )  
@@ -42,14 +42,16 @@ if __name__ == "__main__":
     # Initialize client, create BQ dataset, and then create corresponding tables from specified GCS location (assume Kaggle files loaded here)
     GCS_PATH = os.getenv('GCS_PATH')
     GCP_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT')
+    dataset_id = os.getenv('DATASET_NAME')
+
     client = bigquery.Client()
-    create_dataset('Azure_VM')
+    create_dataset(dataset_id)
 
     # Load data for PdM_errors
     table_name = "PdM_errors"
     schema = [
             bigquery.SchemaField("DATETIME", "TIMESTAMP"),
-            bigquery.SchemaField("MACHINEID", "INTEGER"),
+            bigquery.SchemaField("MACHINEID", "STRING"),
             bigquery.SchemaField("ERRORID", "STRING"),
         ]
 
@@ -59,7 +61,7 @@ if __name__ == "__main__":
     table_name = "PdM_failures"
     schema = [
             bigquery.SchemaField("DATETIME", "TIMESTAMP"),
-            bigquery.SchemaField("MACHINEID", "INTEGER"),
+            bigquery.SchemaField("MACHINEID", "STRING"),
             bigquery.SchemaField("FAILURE", "STRING"),
         ]
 
@@ -68,7 +70,7 @@ if __name__ == "__main__":
     # Load data for PdM_machines
     table_name = "PdM_machines"
     schema = [
-            bigquery.SchemaField("MACHINEID", "INTEGER"),
+            bigquery.SchemaField("MACHINEID", "STRING"),
             bigquery.SchemaField("MODEL", "STRING"),
             bigquery.SchemaField("AGE", "INTEGER"),
         ]
@@ -79,7 +81,7 @@ if __name__ == "__main__":
     table_name = "PdM_maint"
     schema = [
             bigquery.SchemaField("DATETIME", "TIMESTAMP"),
-            bigquery.SchemaField("MACHINEID", "INTEGER"),
+            bigquery.SchemaField("MACHINEID", "STRING"),
             bigquery.SchemaField("COMP", "STRING"),
         ]
 
@@ -89,7 +91,7 @@ if __name__ == "__main__":
     table_name = "PdM_telemetry"
     schema = [
             bigquery.SchemaField("DATETIME", "TIMESTAMP"),
-            bigquery.SchemaField("MACHINEID", "INTEGER"),
+            bigquery.SchemaField("MACHINEID", "STRING"),
             bigquery.SchemaField("VOLT", "FLOAT"),
             bigquery.SchemaField("ROTATE", "FLOAT"),
             bigquery.SchemaField("PRESSURE", "FLOAT"),

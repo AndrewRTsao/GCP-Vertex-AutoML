@@ -1,18 +1,3 @@
-{{
-  config(
-    materialized = 'table',
-    meta = {
-     "continual": {
-       "type": "FeatureSet",
-       "name": "vm_machine_hourly_status",
-       "entity": "azure_vm",
-       "index": "machine_id",
-       "time_index": "ts"
-     }
-   }
-  )
-}}
-
 with machine_status as (
 
     select * from {{ ref('int_vm_status') }}

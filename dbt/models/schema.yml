@@ -132,8 +132,6 @@ models:
         tests:
           - unique
           - not_null
-      - name: ts
-        description: Dummy timestamp hardcoded to '2015-01-01 00:00:00.000' because timestamp is needed when batch ingesting features
       - name: model
         description: The specific model of the vm / machine
         tests:
