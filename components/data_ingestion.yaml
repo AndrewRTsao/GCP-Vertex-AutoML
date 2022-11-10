@@ -1,0 +1,33 @@
+name: data-ingest
+description: Ingest data from predefined GCS bucket into BQ
+inputs:
+- name: INPUT_GCS_PATH
+  type: String
+- name: GOOGLE_CLOUD_PROJECT
+  type: String
+- name: DATASET_NAME
+  type: String
+- name: DATASET_LOCATION
+  type: String
+implementation:
+  container:
+    image: us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex-azure-vm-dbt@sha256:03351192ef6ba72bc278632c6bc6e7322950502c2c2a257e4b6a8e588f2e6260
+    command:
+    - sh
+    - -ec
+    - INPUT_GCS_PATH="$0" "$@"
+    - inputValue: INPUT_GCS_PATH
+    - sh
+    - -ec
+    - GOOGLE_CLOUD_PROJECT="$0" "$@"
+    - inputValue: GOOGLE_CLOUD_PROJECT
+    - sh
+    - -ec
+    - DATASET_NAME="$0" "$@"
+    - inputValue: DATASET_NAME
+    - sh
+    - -ec
+    - DATASET_LOCATION="$0" "$@"
+    - inputValue: DATASET_LOCATION
+    - python
+    - ../src/data_ingestion.py

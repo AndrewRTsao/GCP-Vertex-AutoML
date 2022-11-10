@@ -1,28 +1,29 @@
-def delete_featurestore(
-    project: str,
-    location: str,
-    featurestore_name: str,
-    sync: bool = True,
-    force: bool = True,
-):
+import os
+from google.cloud import aiplatform
+from google.cloud import bigquery
 
-    aiplatform.init(project=project, location=location)
+def cleanup():
 
-    fs = aiplatform.featurestore.Featurestore(featurestore_name=featurestore_name)
-    fs.delete(sync=sync, force=force)
+    def delete_featurestore(
+        project: str,
+        location: str,
+        featurestore_name: str,
+        sync: bool = True,
+        force: bool = True,
+    ):
 
-def delete_dataset(dataset_id):
-    client = bigquery.Client()
-    
-    client.delete_dataset(
-        dataset_id, delete_contents=True, not_found_ok=True
-    )
-    print("Deleted dataset '{}'.".format(dataset_id))
+        aiplatform.init(project=project, location=location)
 
-if __name__ == "__main__":
-    import os
-    from google.cloud import aiplatform
-    from google.cloud import bigquery
+        fs = aiplatform.featurestore.Featurestore(featurestore_name=featurestore_name)
+        fs.delete(sync=sync, force=force)
+
+    def delete_dataset(dataset_id):
+        client = bigquery.Client()
+        
+        client.delete_dataset(
+            dataset_id, delete_contents=True, not_found_ok=True
+        )
+        print("Deleted dataset '{}'.".format(dataset_id))
 
     # Initialize variables
     project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
@@ -32,3 +33,7 @@ if __name__ == "__main__":
 
     delete_featurestore(project_id, region, featurestore_id)
     delete_dataset(dataset_id)
+
+if __name__ == "__main__":
+
+    cleanup()

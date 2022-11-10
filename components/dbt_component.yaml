@@ -1,0 +1,27 @@
+name: dbt-run
+description: Perform feature engineering using dbt
+inputs:
+- name: GOOGLE_CLOUD_PROJECT
+  type: String
+- name: DATASET_NAME
+  type: String
+- name: GOOGLE_APPLICATION_CREDENTIALS
+  type: String
+implementation:
+  container:
+    image: us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex-azure-vm-dbt@sha256:03351192ef6ba72bc278632c6bc6e7322950502c2c2a257e4b6a8e588f2e6260
+    command:
+    - sh
+    - -ec
+    - GOOGLE_CLOUD_PROJECT="$0" "$@"
+    - inputValue: GOOGLE_CLOUD_PROJECT
+    - sh
+    - -ec
+    - DATASET_NAME="$0" "$@"
+    - inputValue: DATASET_NAME
+    - sh
+    - -ec
+    - GOOGLE_APPLICATION_CREDENTIALS="$0" "$@"
+    - inputValue: GOOGLE_APPLICATION_CREDENTIALS
+    - dbt
+    - run

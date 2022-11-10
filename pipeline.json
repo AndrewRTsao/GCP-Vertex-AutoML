@@ -1,0 +1,275 @@
+{
+  "pipelineSpec": {
+    "components": {
+      "comp-data-ingest": {
+        "executorLabel": "exec-data-ingest",
+        "inputDefinitions": {
+          "parameters": {
+            "DATASET_LOCATION": {
+              "type": "STRING"
+            },
+            "DATASET_NAME": {
+              "type": "STRING"
+            },
+            "GOOGLE_CLOUD_PROJECT": {
+              "type": "STRING"
+            },
+            "INPUT_GCS_PATH": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-dbt-run": {
+        "executorLabel": "exec-dbt-run",
+        "inputDefinitions": {
+          "parameters": {
+            "DATASET_NAME": {
+              "type": "STRING"
+            },
+            "GOOGLE_APPLICATION_CREDENTIALS": {
+              "type": "STRING"
+            },
+            "GOOGLE_CLOUD_PROJECT": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-feature-store": {
+        "executorLabel": "exec-feature-store",
+        "inputDefinitions": {
+          "parameters": {
+            "DATASET_NAME": {
+              "type": "STRING"
+            },
+            "GOOGLE_CLOUD_PROJECT": {
+              "type": "STRING"
+            },
+            "PREDICTION_PERIOD": {
+              "type": "STRING"
+            },
+            "VERTEX_REGION": {
+              "type": "STRING"
+            }
+          }
+        }
+      }
+    },
+    "deploymentSpec": {
+      "executors": {
+        "exec-data-ingest": {
+          "container": {
+            "command": [
+              "sh",
+              "-ec",
+              "INPUT_GCS_PATH=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['INPUT_GCS_PATH']}}",
+              "sh",
+              "-ec",
+              "GOOGLE_CLOUD_PROJECT=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['GOOGLE_CLOUD_PROJECT']}}",
+              "sh",
+              "-ec",
+              "DATASET_NAME=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['DATASET_NAME']}}",
+              "sh",
+              "-ec",
+              "DATASET_LOCATION=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['DATASET_LOCATION']}}",
+              "python",
+              "../src/data_ingestion.py"
+            ],
+            "image": "us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex-azure-vm-dbt@sha256:03351192ef6ba72bc278632c6bc6e7322950502c2c2a257e4b6a8e588f2e6260"
+          }
+        },
+        "exec-dbt-run": {
+          "container": {
+            "command": [
+              "sh",
+              "-ec",
+              "GOOGLE_CLOUD_PROJECT=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['GOOGLE_CLOUD_PROJECT']}}",
+              "sh",
+              "-ec",
+              "DATASET_NAME=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['DATASET_NAME']}}",
+              "sh",
+              "-ec",
+              "GOOGLE_APPLICATION_CREDENTIALS=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['GOOGLE_APPLICATION_CREDENTIALS']}}",
+              "dbt",
+              "run"
+            ],
+            "image": "us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex-azure-vm-dbt@sha256:03351192ef6ba72bc278632c6bc6e7322950502c2c2a257e4b6a8e588f2e6260"
+          }
+        },
+        "exec-feature-store": {
+          "container": {
+            "command": [
+              "sh",
+              "-ec",
+              "GOOGLE_CLOUD_PROJECT=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['GOOGLE_CLOUD_PROJECT']}}",
+              "sh",
+              "-ec",
+              "DATASET_NAME=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['DATASET_NAME']}}",
+              "sh",
+              "-ec",
+              "VERTEX_REGION=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['VERTEX_REGION']}}",
+              "sh",
+              "-ec",
+              "PREDICTION_PERIOD=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['PREDICTION_PERIOD']}}",
+              "python",
+              "../src/feature_store.py"
+            ],
+            "image": "us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex-azure-vm-dbt@sha256:03351192ef6ba72bc278632c6bc6e7322950502c2c2a257e4b6a8e588f2e6260"
+          }
+        }
+      }
+    },
+    "pipelineInfo": {
+      "name": "vertex-dbt-pipeline"
+    },
+    "root": {
+      "dag": {
+        "tasks": {
+          "data-ingest": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-data-ingest"
+            },
+            "inputs": {
+              "parameters": {
+                "DATASET_LOCATION": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "US"
+                    }
+                  }
+                },
+                "DATASET_NAME": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "azure_vm2"
+                    }
+                  }
+                },
+                "GOOGLE_CLOUD_PROJECT": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "continual-dev"
+                    }
+                  }
+                },
+                "INPUT_GCS_PATH": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "gs://vertex-delivery-example/azure_vm/"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "data-ingest"
+            }
+          },
+          "dbt-run": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-dbt-run"
+            },
+            "dependentTasks": [
+              "data-ingest"
+            ],
+            "inputs": {
+              "parameters": {
+                "DATASET_NAME": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "azure_vm2"
+                    }
+                  }
+                },
+                "GOOGLE_APPLICATION_CREDENTIALS": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "/Users/andrew/Continual/delivery-examples/GCP-Vertex/data/continual-dev-aef3ddfaa866.json"
+                    }
+                  }
+                },
+                "GOOGLE_CLOUD_PROJECT": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "continual-dev"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "dbt-run"
+            }
+          },
+          "feature-store": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-feature-store"
+            },
+            "dependentTasks": [
+              "dbt-run"
+            ],
+            "inputs": {
+              "parameters": {
+                "DATASET_NAME": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "azure_vm2"
+                    }
+                  }
+                },
+                "GOOGLE_CLOUD_PROJECT": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "continual-dev"
+                    }
+                  }
+                },
+                "PREDICTION_PERIOD": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "7day"
+                    }
+                  }
+                },
+                "VERTEX_REGION": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "us-central1"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "feature-store"
+            }
+          }
+        }
+      }
+    },
+    "schemaVersion": "2.0.0",
+    "sdkVersion": "kfp-1.8.14"
+  },
+  "runtimeConfig": {}
+}

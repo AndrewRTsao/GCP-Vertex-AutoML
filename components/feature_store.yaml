@@ -1,0 +1,33 @@
+name: feature-store
+description: Read data into feature store and produce final training dataset
+inputs:
+- name: GOOGLE_CLOUD_PROJECT
+  type: String
+- name: DATASET_NAME
+  type: String
+- name: VERTEX_REGION
+  type: String
+- name: PREDICTION_PERIOD
+  type: String
+implementation:
+  container:
+    image: us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex-azure-vm-dbt@sha256:03351192ef6ba72bc278632c6bc6e7322950502c2c2a257e4b6a8e588f2e6260
+    command:
+    - sh
+    - -ec
+    - GOOGLE_CLOUD_PROJECT="$0" "$@"
+    - inputValue: GOOGLE_CLOUD_PROJECT
+    - sh
+    - -ec
+    - DATASET_NAME="$0" "$@"
+    - inputValue: DATASET_NAME
+    - sh
+    - -ec
+    - VERTEX_REGION="$0" "$@"
+    - inputValue: VERTEX_REGION
+    - sh
+    - -ec
+    - PREDICTION_PERIOD="$0" "$@"
+    - inputValue: PREDICTION_PERIOD
+    - python
+    - ../src/feature_store.py

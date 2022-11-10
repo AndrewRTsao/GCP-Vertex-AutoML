@@ -22,6 +22,10 @@ source env.sh
 . ./build_image.sh
 ```
 
-5. Run the **run_pipeline.py** script to trigger the Vertex AI pipelines (ingests the data into BQ from step 1, dbt run, creates and pushes features into Vertex feature store, train the model using Vertex AutoML, evaluates the model, and then deploys the model to a Vertex endpoint).
+5. Run the **run_pipeline.py** script to trigger the prepackaged Vertex AI pipeline (ingests the data into BQ from step 1, dbt run, creates and pushes features into Vertex feature store, trains the model using Vertex AutoML, evaluates the model, and then finally deploys the model to a Vertex endpoint if a certain threshold is met).
 
-6. (Optional) If you would like, run the **cleanup.py** script once you're done and don't need the GCP project / model / data anymore.
+```sh
+python run_pipeline.py
+```
+
+6. (Optional) If you would like, run the **cleanup.py** script once you're done and if don't need the underlying BQ dataset, feature store, and model anymore.

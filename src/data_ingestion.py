@@ -1,44 +1,44 @@
-def create_dataset(dataset_id):
+import os
+from google.cloud import bigquery
 
-    # Construct full Dataset object from client to send to the API
-    dataset_ref = bigquery.DatasetReference.from_string(dataset_id, default_project=client.project)
-    dataset = bigquery.Dataset(dataset_ref)
-    dataset.location = os.getenv('DATASET_LOCATION')
+def ingest_data():
 
-    # Send the dataset to the API for creation, with an explicit timeout.
-    # Raises google.api_core.exceptions.Conflict if the Dataset already
-    # exists within the project.
-    dataset = client.create_dataset(dataset, timeout=60)
-    print("Created dataset {}.{}".format(client.project, dataset.dataset_id))
+    def create_dataset(dataset_id):
 
-# def load_table_uri_csv(table_id: str) -> None:
-def load_table_uri_csv(table_name: str, schema: object):
+        # Construct full Dataset object from client to send to the API
+        dataset_ref = bigquery.DatasetReference.from_string(dataset_id, default_project=client.project)
+        dataset = bigquery.Dataset(dataset_ref)
+        dataset.location = os.getenv('DATASET_LOCATION')
 
-    # Creating fully qualified table name
-    table_id = GCP_PROJECT + "." + dataset_id + "." + table_name
+        # Send the dataset to the API for creation, with an explicit timeout.
+        # Raises google.api_core.exceptions.Conflict if the Dataset already
+        # exists within the project.
+        dataset = client.create_dataset(dataset, timeout=60)
+        print("Created dataset {}.{}".format(client.project, dataset.dataset_id))
 
-    # Defining job config for loading data from GCS into BQ table
-    job_config = bigquery.LoadJobConfig(
-        schema=schema,
-        skip_leading_rows=1,
-        source_format=bigquery.SourceFormat.CSV,
-    )
-    uri = INPUT_GCS_PATH + table_name + ".csv" # Path where file is stored on GCS bucket
+    def load_table_uri_csv(table_name: str, schema: object):
 
-    # Loading data into BQ table from GCS bucket
-    load_job = client.load_table_from_uri(
-        uri, table_id, job_config=job_config
-    )  
-    load_job.result() 
+        # Creating fully qualified table name
+        table_id = GCP_PROJECT + "." + dataset_id + "." + table_name
 
-    # Retrieving results
-    destination_table = client.get_table(table_id)  
-    print("Loaded {} rows ".format(destination_table.num_rows) + "into " + table_id)
+        # Defining job config for loading data from GCS into BQ table
+        job_config = bigquery.LoadJobConfig(
+            schema=schema,
+            skip_leading_rows=1,
+            source_format=bigquery.SourceFormat.CSV,
+        )
+        uri = INPUT_GCS_PATH + table_name + ".csv" # Path where file is stored on GCS bucket
 
-if __name__ == "__main__":
-    import os
-    from google.cloud import bigquery
-    
+        # Loading data into BQ table from GCS bucket
+        load_job = client.load_table_from_uri(
+            uri, table_id, job_config=job_config
+        )  
+        load_job.result() 
+
+        # Retrieving results
+        destination_table = client.get_table(table_id)  
+        print("Loaded {} rows ".format(destination_table.num_rows) + "into " + table_id)
+
     # Initialize client, create BQ dataset, and then create corresponding tables from specified GCS location (assume Kaggle files loaded here)
     INPUT_GCS_PATH = os.getenv('INPUT_GCS_PATH')
     GCP_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT')
@@ -99,3 +99,7 @@ if __name__ == "__main__":
         ]
 
     load_table_uri_csv(table_name, schema)
+
+if __name__ == "__main__":
+
+    ingest_data()

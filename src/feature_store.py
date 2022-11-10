@@ -4,57 +4,59 @@ from typing import List, Union, Optional
 
 from google.cloud import aiplatform
 
-def create_featurestore(
-    featurestore_id: str,
-    online_store_fixed_node_count: int = 1,
-    sync: bool = True,
-):
+def load_data_into_featurestore():
 
-    fs = aiplatform.Featurestore.create(
-        featurestore_id=featurestore_id,
-        online_store_fixed_node_count=online_store_fixed_node_count,
-        sync=sync,
-    )
+    def create_featurestore(
+        featurestore_id: str,
+        online_store_fixed_node_count: int = 1,
+        sync: bool = True,
+    ):
 
-    return fs
+        fs = aiplatform.Featurestore.create(
+            featurestore_id=featurestore_id,
+            online_store_fixed_node_count=online_store_fixed_node_count,
+            sync=sync,
+        )
 
-def create_entity_type_and_features(
-    entity_type_id: str,
-    featurestore_name: str,
-    feature_configs: object,
-    sync: bool = True,
-):
+        return fs
 
-    entity_type = aiplatform.EntityType.create(
-        entity_type_id=entity_type_id, featurestore_name=featurestore_name
-    )
+    def create_entity_type_and_features(
+        entity_type_id: str,
+        featurestore_name: str,
+        feature_configs: object,
+        sync: bool = True,
+    ):
 
-    entity_type.batch_create_features(feature_configs=feature_configs, sync=sync)
+        entity_type = aiplatform.EntityType.create(
+            entity_type_id=entity_type_id, featurestore_name=featurestore_name
+        )
 
-    return entity_type
+        entity_type.batch_create_features(feature_configs=feature_configs, sync=sync)
 
-def batch_ingest_features(
-    entity_type_id: str,
-    featurestore_id: str,
-    entity_id_field: str,
-    feature_time: Union[str, datetime.datetime],
-    bq_source_uri: str,
-):
-    
-    entity_type = aiplatform.featurestore.EntityType(
-        entity_type_name=entity_type_id, featurestore_id=featurestore_id
-    )
+        return entity_type
 
-    feature_ids = [feature.name for feature in entity_type.list_features()]
+    def batch_ingest_features(
+        entity_type_id: str,
+        featurestore_id: str,
+        entity_id_field: str,
+        feature_time: Union[str, datetime.datetime],
+        bq_source_uri: str,
+    ):
+        
+        entity_type = aiplatform.featurestore.EntityType(
+            entity_type_name=entity_type_id, featurestore_id=featurestore_id
+        )
 
-    entity_type.ingest_from_bq(
-        feature_ids=feature_ids,
-        feature_time=feature_time,
-        bq_source_uri=bq_source_uri,
-        entity_id_field=entity_id_field,
-    )
+        feature_ids = [feature.name for feature in entity_type.list_features()]
 
-def batch_serve_features_to_bq(
+        entity_type.ingest_from_bq(
+            feature_ids=feature_ids,
+            feature_time=feature_time,
+            bq_source_uri=bq_source_uri,
+            entity_id_field=entity_id_field,
+        )
+
+    def batch_serve_features_to_bq(
     featurestore_name: str,
     bq_destination_output_uri: str,
     read_instances_uri: str,
@@ -63,23 +65,21 @@ def batch_serve_features_to_bq(
     sync: bool = True,
 ):
 
-    fs = aiplatform.featurestore.Featurestore(featurestore_name=featurestore_name)
+        fs = aiplatform.featurestore.Featurestore(featurestore_name=featurestore_name)
 
-    fs.batch_serve_to_bq(
-        bq_destination_output_uri=bq_destination_output_uri,
-        serving_feature_ids=serving_feature_ids,
-        read_instances_uri=read_instances_uri,
-        pass_through_fields=pass_through_fields,
-        sync=sync,
-    )
-
-if __name__ == "__main__":
+        fs.batch_serve_to_bq(
+            bq_destination_output_uri=bq_destination_output_uri,
+            serving_feature_ids=serving_feature_ids,
+            read_instances_uri=read_instances_uri,
+            pass_through_fields=pass_through_fields,
+            sync=sync,
+        )
 
     # Initialize variables
     project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
     dataset_name = os.getenv('DATASET_NAME')
     region = os.getenv('VERTEX_REGION')
-    fs_id = os.getenv('DATASET_NAME') + "_fs"
+    fs_id = dataset_name + "_fs"
     fs_index = "machine_id"
     time_index = "ts"
 
@@ -445,3 +445,7 @@ if __name__ == "__main__":
     }
 
     batch_serve_features_to_bq(fs_id, destination_table_uri, read_instance_uri, serving_feature_ids, pass_through_fields)
+
+if __name__ == "__main__":
+
+    load_data_into_featurestore()
