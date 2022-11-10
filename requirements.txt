@@ -1,0 +1,6 @@
+dbt-bigquery
+google-cloud-bigquery
+google-cloud-storage
+google-cloud-aiplatform
+google-cloud-pipeline-components
+kfp

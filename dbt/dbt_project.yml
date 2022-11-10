@@ -7,7 +7,7 @@ version: '1.0.0'
 config-version: 2
 
 # This setting configures which "profile" dbt uses for this project.
-profile: 'bigquery_azure_vm'
+profile: 'bigquery'
 
 # Setting variables in case user wants to adjust prediction threshold in "Nday" model or split thresholds
 vars:

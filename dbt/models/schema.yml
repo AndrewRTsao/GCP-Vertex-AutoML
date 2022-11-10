@@ -11,7 +11,7 @@ models:
           - relationships:
               to: ref('vm_next_failure_base')
               field: machine_id
-      - name: ts
+      - name: timestamp
         description: timestamp
         tests: 
           - not_null
@@ -30,7 +30,7 @@ models:
           - relationships:
               to: ref('vm_next_failure_base')
               field: machine_id
-      - name: ts
+      - name: timestamp
         description: timestamp
         tests: 
           - not_null
@@ -49,7 +49,7 @@ models:
           - relationships:
               to: ref('vm_next_failure_base')
               field: machine_id
-      - name: ts
+      - name: timestamp
         description: timestamp
         tests: 
           - not_null

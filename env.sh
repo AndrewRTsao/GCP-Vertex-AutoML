@@ -1,0 +1,10 @@
+export LOCAL_PROJECT="/Users/andrew/Continual/delivery-examples/GCP-Vertex" # Fully qualified path of your locally cloned GCP-Vertex project
+export SERVICE_KEY="continual-dev-aef3ddfaa866.json" # Name of your service account API key (for GCP)
+export GOOGLE_APPLICATION_CREDENTIALS="${LOCAL_PROJECT}/data/${SERVICE_KEY}" # Don't update this env variable
+export GOOGLE_CLOUD_PROJECT="continual-dev" # Set to the default GCP project that you wish to use
+export DATASET_NAME="azure_vm" # What you want to name your dataset in BigQuery and your feature store in Vertex (should be lowercase)
+export DATASET_LOCATION="US" # Location of your BigQuery dataset (should match or be accessible by the Vertex region)
+export VERTEX_REGION="us-central1" # Location where you wish to perform your Vertex AI operations. Check: https://cloud.google.com/vertex-ai/docs/general/locations
+export INPUT_GCS_PATH="gs://vertex-delivery-example/azure_vm/" # Path to GCS bucket where you uploaded Kaggle files
+export PREDICTION_PERIOD="7day" # Prediction interval that you would like to use for your predictive maintenance model, select either "1day", "7day", or "30day"
+export DOCKER_REPO="azure-vm" # The name of your docker repo that you'd like to use / create for your KFP component base image (follow proper syntax e.g. lowercase letters, numbers, and hyphens)

@@ -8,14 +8,20 @@ kaggle datasets download -d arnabbiswas1/microsoft-azure-predictive-maintenance
 
 Afterwards, upload it to a GCS bucket (in the correct region).
 
-2. Fill out the environment variables in ./vertex/env.sh and run
+2. Create a [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-console) and copy the resulting json file into the */data* directory
+
+3. Fill out the environment variables in **env.sh** and run
 
 ```sh 
-source vertex/env.sh
+source env.sh
 ```
 
-3. Run the staging data_ingestion.py script to load your data from GCS into BigQuery
+4. Run the **build_image.sh** script to build the component container image and push it to the Artifact Registry (make sure your Docker daemon is running).
 
-4. dbt
-5. feature store
-6. training pipelines
+```sh
+. ./build_image.sh
+```
+
+5. Run the **run_pipeline.py** script to trigger the Vertex AI pipelines (ingests the data into BQ from step 1, dbt run, creates and pushes features into Vertex feature store, train the model using Vertex AutoML, evaluates the model, and then deploys the model to a Vertex endpoint).
+
+6. (Optional) If you would like, run the **cleanup.py** script once you're done and don't need the GCP project / model / data anymore.

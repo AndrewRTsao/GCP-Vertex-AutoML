@@ -23,7 +23,7 @@ def load_table_uri_csv(table_name: str, schema: object):
         skip_leading_rows=1,
         source_format=bigquery.SourceFormat.CSV,
     )
-    uri = GCS_PATH + table_name + ".csv" # Path where file is stored on GCS bucket
+    uri = INPUT_GCS_PATH + table_name + ".csv" # Path where file is stored on GCS bucket
 
     # Loading data into BQ table from GCS bucket
     load_job = client.load_table_from_uri(
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     from google.cloud import bigquery
     
     # Initialize client, create BQ dataset, and then create corresponding tables from specified GCS location (assume Kaggle files loaded here)
-    GCS_PATH = os.getenv('GCS_PATH')
+    INPUT_GCS_PATH = os.getenv('INPUT_GCS_PATH')
     GCP_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT')
     dataset_id = os.getenv('DATASET_NAME')
 
