@@ -1,10 +1,10 @@
 import os
 import datetime
-from typing import List, Union, Optional
+from typing import List, Union, Optional, NamedTuple
 
 from google.cloud import aiplatform
 
-def load_data_into_featurestore():
+def load_data_into_featurestore() -> str:
 
     def create_featurestore(
         featurestore_id: str,
@@ -445,7 +445,12 @@ def load_data_into_featurestore():
     }
 
     batch_serve_features_to_bq(fs_id, destination_table_uri, read_instance_uri, serving_feature_ids, pass_through_fields)
+    
+    # Return path to training dataset for use by downstream pipeline components
+    return destination_table_uri
 
 if __name__ == "__main__":
 
-    load_data_into_featurestore()
+    bq_source = load_data_into_featurestore()
+    print("Training data has been loaded into BQ:")
+    print(bq_source)
