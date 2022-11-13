@@ -9,7 +9,6 @@ from google_cloud_pipeline_components.aiplatform import (
         TabularDatasetCreateOp)
 
 import kfp
-# from kfp import components, dsl
 from kfp import components
 from kfp.v2 import dsl
 from kfp.v2 import compiler
@@ -29,7 +28,7 @@ def run_pipeline():
     prediction_period = os.getenv('PREDICTION_PERIOD')
     
     # Creating bucket and pipeline root where pipeline and model assets will be stored
-    bucket_uri = "gs://" + project_id + "-" + os.getenv('BUCKET_NAME')
+    bucket_uri = "gs://" + os.getenv('BUCKET_NAME')
     pipeline_root = f"{bucket_uri}/pipeline_root"
     pipeline_root
 
@@ -66,6 +65,7 @@ def run_pipeline():
         if check_comp_file['implementation']['container']['image'] == base_image:
             os.rename("/tmp/temp.yaml", component_file)
 
+    # Defining custom model evaluation component
     @component(
         base_image="gcr.io/deeplearning-platform-release/tf2-cpu.2-6:latest",
         output_component_file="components/tabular_eval_component.yaml",
@@ -82,6 +82,10 @@ def run_pipeline():
         
         import json
         import logging
+
+        from google.cloud import aiplatform
+
+        aiplatform.init(project=project, location=location)
         
         # Fetch model eval info
         def get_eval_info(model):
@@ -106,13 +110,12 @@ def run_pipeline():
                 metrics_string_list,
             )
 
-        # Use the given metrics threshold(s) to determine whether the model is
-        # accurate enough to deploy.
+        # Use the given metrics threshold(s) to determine whether the model is accurate enough to deploy.
         def classification_thresholds_check(metrics_dict, thresholds_dict):
             for k, v in thresholds_dict.items():
                 logging.info("k {}, v {}".format(k, v))
-                if k in ["auRoc", "auPrc"]:  # higher is better
-                    if metrics_dict[k] < v:  # if under threshold, don't deploy
+                if k in ["auRoc", "auPrc"]:  # Higher is better
+                    if metrics_dict[k] < v:  # If under threshold, don't deploy
                         logging.info("{} < {}; returning False".format(metrics_dict[k], v))
                         return False
             logging.info("threshold checks passed.")
@@ -122,7 +125,7 @@ def run_pipeline():
             test_confusion_matrix = metrics_list[0]["confusionMatrix"]
             logging.info("rows: %s", test_confusion_matrix["rows"])
 
-            # log the ROC curve
+            # Log the ROC curve
             fpr = []
             tpr = []
             thresholds = []
@@ -135,7 +138,7 @@ def run_pipeline():
             print(f"thresholds: {thresholds}")
             metricsc.log_roc_curve(fpr, tpr, thresholds)
 
-            # log the confusion matrix
+            # Log the confusion matrix
             annotations = []
             for item in test_confusion_matrix["annotationSpecs"]:
                 annotations.append(item["displayName"])
@@ -145,7 +148,7 @@ def run_pipeline():
                 test_confusion_matrix["rows"],
             )
 
-            # log textual metrics info as well
+            # Log textual metrics info as well
             for metric in metrics_list[0].keys():
                 if metric != "confidenceMetrics":
                     val_string = json.dumps(metrics_list[0][metric])
@@ -153,7 +156,7 @@ def run_pipeline():
 
         logging.getLogger().setLevel(logging.INFO)
 
-        # extract the model resource name from the input Model Artifact
+        # Extract the model resource name from the input Model Artifact
         model_resource_path = model.metadata["resourceName"]
         logging.info("model path: %s", model_resource_path)
 
@@ -191,15 +194,16 @@ def run_pipeline():
         MACHINE_TYPE: str = "n1-standard-4",
     ):
         
-        # Creating component ops
+        # Creating component ops for pipeline
         data_ingest_op = data_ingestion_component(input_gcs_path, project_id, dataset_name, dataset_location)
         dbt_op = dbt_component(project_id, dataset_name, credentials)
         feature_store_op = feature_store_component(project_id, dataset_name, region, prediction_period)
 
-        BQ_PATTERN = "bq://{project}.{dataset}.{table}" # To help construct BQ URIs
+        
+        BQ_PATTERN = "bq://{project}.{dataset}.{table}" # To help construct BQ URI for bq_source
         bq_source = BQ_PATTERN.format(
-        project=project_id, dataset=dataset_name, table="training_data"
-    )
+            project=project_id, dataset=dataset_name, table="training_data"
+        )
         
         dataset_create_op = TabularDatasetCreateOp(
             project=project, display_name=DATASET_DISPLAY_NAME, bq_source=bq_source
@@ -213,7 +217,7 @@ def run_pipeline():
             budget_milli_node_hours=1000,
             model_display_name=MODEL_DISPLAY_NAME,
             dataset=dataset_create_op.outputs["dataset"],
-            target_column="failure_in_" + os.getenv('PREDICTION_PERIOD'),
+            target_column="failure_in_" + prediction_period,
             predefined_split_column_name="split",
         )
         
@@ -248,6 +252,7 @@ def run_pipeline():
         # Specifying order of pipeline components that don't have direct inputs / outputs
         dbt_op.after(data_ingest_op)
         feature_store_op.after(dbt_op)
+        dataset_create_op.after(feature_store_op)
 
 
     # Compiles the pipeline defined in the previous function into a json file executable by Vertex AI Pipelines
@@ -267,7 +272,7 @@ def run_pipeline():
             parameter_values={
                 "project": project_id,
                 "gcp_region": region,
-                "thresholds_dict_str": '{"auRoc": 0.8}',
+                "thresholds_dict_str": '{"auRoc": 0.95}',
                 "DATASET_DISPLAY_NAME": vertex_dataset,
                 "TRAINING_DISPLAY_NAME": training_name,
                 "MODEL_DISPLAY_NAME": model_name,
@@ -282,22 +287,23 @@ def run_pipeline():
     # Initializing client and create feature store
     aiplatform.init(project=project_id, location=region)
 
-    # Setting component paths
+    # Setting custom component paths (defined as YAML files)
     script_dir = os.path.dirname(__file__)
-    data_ingestion_path = os.path.join(script_dir, 'components/data_ingestion.yaml')
+    data_ingestion_path = os.path.join(script_dir, 'components/data_ingestion_component.yaml')
     dbt_component_path = os.path.join(script_dir, 'components/dbt_component.yaml')
-    feature_store_path = os.path.join(script_dir, 'components/feature_store.yaml')
+    feature_store_path = os.path.join(script_dir, 'components/feature_store_component.yaml')
 
-    # Update component files with new docker image built from build_image.sh
+    # Update custom component files with new docker image built from build_image.sh
     update_docker_image_in_component_file(docker_image, data_ingestion_path)
     update_docker_image_in_component_file(docker_image, dbt_component_path)
     update_docker_image_in_component_file(docker_image, feature_store_path)
 
-    # Loads the component files as separate components for pipeline
+    # Loads the custom component files as separate components for pipeline (initial data ingestion, dbt run, and feature store creation / serving)
     data_ingestion_component = components.load_component_from_file(data_ingestion_path)
     dbt_component = components.load_component_from_file(dbt_component_path)
     feature_store_component = components.load_component_from_file(feature_store_path)
 
+    # Compile the pipeline components and trigger the run
     compile()
     trigger_pipeline()
 

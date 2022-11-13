@@ -46,6 +46,10 @@ implementation:
           import json
           import logging
 
+          from google.cloud import aiplatform
+
+          aiplatform.init(project=project, location=location)
+
           # Fetch model eval info
           def get_eval_info(model):
               response = model.list_model_evaluations()

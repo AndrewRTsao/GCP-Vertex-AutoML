@@ -10,9 +10,7 @@ def ingest_data():
         dataset = bigquery.Dataset(dataset_ref)
         dataset.location = os.getenv('DATASET_LOCATION')
 
-        # Send the dataset to the API for creation, with an explicit timeout.
-        # Raises google.api_core.exceptions.Conflict if the Dataset already
-        # exists within the project.
+        # Send the dataset to the API for creation with an explicit timeout. Raises google.api_core.exceptions conflict if the Dataset already exists within the project.
         dataset = client.create_dataset(dataset, timeout=60)
         print("Created dataset {}.{}".format(client.project, dataset.dataset_id))
 
@@ -39,7 +37,7 @@ def ingest_data():
         destination_table = client.get_table(table_id)  
         print("Loaded {} rows ".format(destination_table.num_rows) + "into " + table_id)
 
-    # Initialize client, create BQ dataset, and then create corresponding tables from specified GCS location (assume Kaggle files loaded here)
+    # Initialize client, create BQ dataset, and then create corresponding tables from specified GCS location (assume Kaggle files are loaded here)
     INPUT_GCS_PATH = os.getenv('INPUT_GCS_PATH')
     GCP_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT')
     dataset_id = os.getenv('DATASET_NAME')

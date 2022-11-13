@@ -1,5 +1,6 @@
-name: feature-store
-description: Read data into feature store and produce final training dataset
+name: load-feature-store
+description: Read feature engineering data into feature store and produce final training
+  dataset for model
 inputs:
 - name: GOOGLE_CLOUD_PROJECT
   type: String
@@ -9,12 +10,9 @@ inputs:
   type: String
 - name: PREDICTION_PERIOD
   type: String
-outputs:
-- name: bq_source
-  type: String
 implementation:
   container:
-    image: us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex--dbt@sha256:386bfd962f680b1600b2d8ffaf0afcb601e6a167ab2ba2475969efab5d07ae74
+    image: us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex-azure-vm-dbt@sha256:9614f7b5bb6d26ec3540753b18772da5c3fd7559cce3c4b92bfcd530cd85030c
     command:
     - sh
     - -ec
@@ -34,4 +32,3 @@ implementation:
     - inputValue: PREDICTION_PERIOD
     - python
     - ../src/feature_store.py
-    - outputPath: bq_source

@@ -315,6 +315,41 @@
           }
         }
       },
+      "comp-data-ingest": {
+        "executorLabel": "exec-data-ingest",
+        "inputDefinitions": {
+          "parameters": {
+            "DATASET_LOCATION": {
+              "type": "STRING"
+            },
+            "DATASET_NAME": {
+              "type": "STRING"
+            },
+            "GOOGLE_CLOUD_PROJECT": {
+              "type": "STRING"
+            },
+            "INPUT_GCS_PATH": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-dbt-run": {
+        "executorLabel": "exec-dbt-run",
+        "inputDefinitions": {
+          "parameters": {
+            "DATASET_NAME": {
+              "type": "STRING"
+            },
+            "GOOGLE_APPLICATION_CREDENTIALS": {
+              "type": "STRING"
+            },
+            "GOOGLE_CLOUD_PROJECT": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
       "comp-endpoint-create": {
         "executorLabel": "exec-endpoint-create",
         "inputDefinitions": {
@@ -353,6 +388,25 @@
           },
           "parameters": {
             "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-load-feature-store": {
+        "executorLabel": "exec-load-feature-store",
+        "inputDefinitions": {
+          "parameters": {
+            "DATASET_NAME": {
+              "type": "STRING"
+            },
+            "GOOGLE_CLOUD_PROJECT": {
+              "type": "STRING"
+            },
+            "PREDICTION_PERIOD": {
+              "type": "STRING"
+            },
+            "VERTEX_REGION": {
               "type": "STRING"
             }
           }
@@ -524,9 +578,55 @@
               "sh",
               "-ec",
               "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef classification_model_eval_metrics(\n    project: str,\n    location: str,\n    thresholds_dict_str: str,\n    model: Input[Artifact],\n    metrics: Output[Metrics],\n    metricsc: Output[ClassificationMetrics],\n) -> NamedTuple(\"Outputs\", [(\"dep_decision\", str)]):  # Return parameter.\n\n    # Fetch model eval info\n    def get_eval_info(model):\n        response = model.list_model_evaluations()\n        metrics_list = []\n        metrics_string_list = []\n        for evaluation in response:\n            evaluation = evaluation.to_dict()\n            print(\"model_evaluation\")\n            print(\" name:\", evaluation[\"name\"])\n            print(\" metrics_schema_uri:\", evaluation[\"metricsSchemaUri\"])\n            metrics = evaluation[\"metrics\"]\n            for metric in metrics.keys():\n                logging.info(\"metric: %s, value: %s\", metric, metrics[metric])\n            metrics_str = json.dumps(metrics)\n            metrics_list.append(metrics)\n            metrics_string_list.append(metrics_str)\n\n        return (\n            evaluation[\"name\"],\n            metrics_list,\n            metrics_string_list,\n        )\n\n    # Use the given metrics threshold(s) to determine whether the model is\n    # accurate enough to deploy.\n    def classification_thresholds_check(metrics_dict, thresholds_dict):\n        for k, v in thresholds_dict.items():\n            logging.info(\"k {}, v {}\".format(k, v))\n            if k in [\"auRoc\", \"auPrc\"]:  # higher is better\n                if metrics_dict[k] < v:  # if under threshold, don't deploy\n                    logging.info(\"{} < {}; returning False\".format(metrics_dict[k], v))\n                    return False\n        logging.info(\"threshold checks passed.\")\n        return True\n\n    def log_metrics(metrics_list, metricsc):\n        test_confusion_matrix = metrics_list[0][\"confusionMatrix\"]\n        logging.info(\"rows: %s\", test_confusion_matrix[\"rows\"])\n\n        # log the ROC curve\n        fpr = []\n        tpr = []\n        thresholds = []\n        for item in metrics_list[0][\"confidenceMetrics\"]:\n            fpr.append(item.get(\"falsePositiveRate\", 0.0))\n            tpr.append(item.get(\"recall\", 0.0))\n            thresholds.append(item.get(\"confidenceThreshold\", 0.0))\n        print(f\"fpr: {fpr}\")\n        print(f\"tpr: {tpr}\")\n        print(f\"thresholds: {thresholds}\")\n        metricsc.log_roc_curve(fpr, tpr, thresholds)\n\n        # log the confusion matrix\n        annotations = []\n        for item in test_confusion_matrix[\"annotationSpecs\"]:\n            annotations.append(item[\"displayName\"])\n        logging.info(\"confusion matrix annotations: %s\", annotations)\n        metricsc.log_confusion_matrix(\n            annotations,\n            test_confusion_matrix[\"rows\"],\n        )\n\n        # log textual metrics info as well\n        for metric in metrics_list[0].keys():\n            if metric != \"confidenceMetrics\":\n                val_string = json.dumps(metrics_list[0][metric])\n                metrics.log_metric(metric, val_string)\n\n    logging.getLogger().setLevel(logging.INFO)\n\n    # extract the model resource name from the input Model Artifact\n    model_resource_path = model.metadata[\"resourceName\"]\n    logging.info(\"model path: %s\", model_resource_path)\n\n    # Get the trained model resource\n    model = aiplatform.Model(model_resource_path)\n\n    # Get model evaluation metrics from the the trained model\n    eval_name, metrics_list, metrics_str_list = get_eval_info(model)\n    logging.info(\"got evaluation name: %s\", eval_name)\n    logging.info(\"got metrics list: %s\", metrics_list)\n    log_metrics(metrics_list, metricsc)\n\n    thresholds_dict = json.loads(thresholds_dict_str)\n    deploy = classification_thresholds_check(metrics_list[0], thresholds_dict)\n    if deploy:\n        dep_decision = \"true\"\n        print(\"Threshold has been met. Model is being deployed / updated.\")\n    else:\n        dep_decision = \"false\"\n        print(\"Threshold has not been met. Model is not being deployed / updated.\")\n    logging.info(\"deployment decision is %s\", dep_decision)\n\n    return (dep_decision,)\n\n"
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef classification_model_eval_metrics(\n    project: str,\n    location: str,\n    thresholds_dict_str: str,\n    model: Input[Artifact],\n    metrics: Output[Metrics],\n    metricsc: Output[ClassificationMetrics],\n) -> NamedTuple(\"Outputs\", [(\"dep_decision\", str)]):  # Return parameter.\n\n    import json\n    import logging\n\n    from google.cloud import aiplatform\n\n    aiplatform.init(project=project, location=location)\n\n    # Fetch model eval info\n    def get_eval_info(model):\n        response = model.list_model_evaluations()\n        metrics_list = []\n        metrics_string_list = []\n        for evaluation in response:\n            evaluation = evaluation.to_dict()\n            print(\"model_evaluation\")\n            print(\" name:\", evaluation[\"name\"])\n            print(\" metrics_schema_uri:\", evaluation[\"metricsSchemaUri\"])\n            metrics = evaluation[\"metrics\"]\n            for metric in metrics.keys():\n                logging.info(\"metric: %s, value: %s\", metric, metrics[metric])\n            metrics_str = json.dumps(metrics)\n            metrics_list.append(metrics)\n            metrics_string_list.append(metrics_str)\n\n        return (\n            evaluation[\"name\"],\n            metrics_list,\n            metrics_string_list,\n        )\n\n    # Use the given metrics threshold(s) to determine whether the model is\n    # accurate enough to deploy.\n    def classification_thresholds_check(metrics_dict, thresholds_dict):\n        for k, v in thresholds_dict.items():\n            logging.info(\"k {}, v {}\".format(k, v))\n            if k in [\"auRoc\", \"auPrc\"]:  # higher is better\n                if metrics_dict[k] < v:  # if under threshold, don't deploy\n                    logging.info(\"{} < {}; returning False\".format(metrics_dict[k], v))\n                    return False\n        logging.info(\"threshold checks passed.\")\n        return True\n\n    def log_metrics(metrics_list, metricsc):\n        test_confusion_matrix = metrics_list[0][\"confusionMatrix\"]\n        logging.info(\"rows: %s\", test_confusion_matrix[\"rows\"])\n\n        # log the ROC curve\n        fpr = []\n        tpr = []\n        thresholds = []\n        for item in metrics_list[0][\"confidenceMetrics\"]:\n            fpr.append(item.get(\"falsePositiveRate\", 0.0))\n            tpr.append(item.get(\"recall\", 0.0))\n            thresholds.append(item.get(\"confidenceThreshold\", 0.0))\n        print(f\"fpr: {fpr}\")\n        print(f\"tpr: {tpr}\")\n        print(f\"thresholds: {thresholds}\")\n        metricsc.log_roc_curve(fpr, tpr, thresholds)\n\n        # log the confusion matrix\n        annotations = []\n        for item in test_confusion_matrix[\"annotationSpecs\"]:\n            annotations.append(item[\"displayName\"])\n        logging.info(\"confusion matrix annotations: %s\", annotations)\n        metricsc.log_confusion_matrix(\n            annotations,\n            test_confusion_matrix[\"rows\"],\n        )\n\n        # log textual metrics info as well\n        for metric in metrics_list[0].keys():\n            if metric != \"confidenceMetrics\":\n                val_string = json.dumps(metrics_list[0][metric])\n                metrics.log_metric(metric, val_string)\n\n    logging.getLogger().setLevel(logging.INFO)\n\n    # extract the model resource name from the input Model Artifact\n    model_resource_path = model.metadata[\"resourceName\"]\n    logging.info(\"model path: %s\", model_resource_path)\n\n    # Get the trained model resource\n    model = aiplatform.Model(model_resource_path)\n\n    # Get model evaluation metrics from the the trained model\n    eval_name, metrics_list, metrics_str_list = get_eval_info(model)\n    logging.info(\"got evaluation name: %s\", eval_name)\n    logging.info(\"got metrics list: %s\", metrics_list)\n    log_metrics(metrics_list, metricsc)\n\n    thresholds_dict = json.loads(thresholds_dict_str)\n    deploy = classification_thresholds_check(metrics_list[0], thresholds_dict)\n    if deploy:\n        dep_decision = \"true\"\n        print(\"Threshold has been met. Model is being deployed / updated.\")\n    else:\n        dep_decision = \"false\"\n        print(\"Threshold has not been met. Model is not being deployed / updated.\")\n    logging.info(\"deployment decision is %s\", dep_decision)\n\n    return (dep_decision,)\n\n"
             ],
             "image": "gcr.io/deeplearning-platform-release/tf2-cpu.2-6:latest"
+          }
+        },
+        "exec-data-ingest": {
+          "container": {
+            "command": [
+              "sh",
+              "-ec",
+              "INPUT_GCS_PATH=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['INPUT_GCS_PATH']}}",
+              "sh",
+              "-ec",
+              "GOOGLE_CLOUD_PROJECT=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['GOOGLE_CLOUD_PROJECT']}}",
+              "sh",
+              "-ec",
+              "DATASET_NAME=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['DATASET_NAME']}}",
+              "sh",
+              "-ec",
+              "DATASET_LOCATION=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['DATASET_LOCATION']}}",
+              "python",
+              "../src/data_ingestion.py"
+            ],
+            "image": "us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex-azure-vm-dbt@sha256:9614f7b5bb6d26ec3540753b18772da5c3fd7559cce3c4b92bfcd530cd85030c"
+          }
+        },
+        "exec-dbt-run": {
+          "container": {
+            "command": [
+              "sh",
+              "-ec",
+              "GOOGLE_CLOUD_PROJECT=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['GOOGLE_CLOUD_PROJECT']}}",
+              "sh",
+              "-ec",
+              "DATASET_NAME=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['DATASET_NAME']}}",
+              "sh",
+              "-ec",
+              "GOOGLE_APPLICATION_CREDENTIALS=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['GOOGLE_APPLICATION_CREDENTIALS']}}",
+              "dbt",
+              "run"
+            ],
+            "image": "us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex-azure-vm-dbt@sha256:9614f7b5bb6d26ec3540753b18772da5c3fd7559cce3c4b92bfcd530cd85030c"
           }
         },
         "exec-endpoint-create": {
@@ -552,6 +652,31 @@
               "google_cloud_pipeline_components.container.v1.endpoint.create_endpoint.launcher"
             ],
             "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.26"
+          }
+        },
+        "exec-load-feature-store": {
+          "container": {
+            "command": [
+              "sh",
+              "-ec",
+              "GOOGLE_CLOUD_PROJECT=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['GOOGLE_CLOUD_PROJECT']}}",
+              "sh",
+              "-ec",
+              "DATASET_NAME=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['DATASET_NAME']}}",
+              "sh",
+              "-ec",
+              "VERTEX_REGION=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['VERTEX_REGION']}}",
+              "sh",
+              "-ec",
+              "PREDICTION_PERIOD=\"$0\" \"$@\"",
+              "{{$.inputs.parameters['PREDICTION_PERIOD']}}",
+              "python",
+              "../src/feature_store.py"
+            ],
+            "image": "us-central1-docker.pkg.dev/continual-dev/azure-vm/vertex-azure-vm-dbt@sha256:9614f7b5bb6d26ec3540753b18772da5c3fd7559cce3c4b92bfcd530cd85030c"
           }
         },
         "exec-model-deploy": {
@@ -813,6 +938,134 @@
               "condition": "inputs.parameters['pipelineparam--classification-model-eval-metrics-dep_decision'].string_value == 'true'"
             }
           },
+          "data-ingest": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-data-ingest"
+            },
+            "inputs": {
+              "parameters": {
+                "DATASET_LOCATION": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "US"
+                    }
+                  }
+                },
+                "DATASET_NAME": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "azure_vm_pdm"
+                    }
+                  }
+                },
+                "GOOGLE_CLOUD_PROJECT": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "continual-dev"
+                    }
+                  }
+                },
+                "INPUT_GCS_PATH": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "gs://vertex-delivery-example/azure_vm/"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "data-ingest"
+            }
+          },
+          "dbt-run": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-dbt-run"
+            },
+            "dependentTasks": [
+              "data-ingest"
+            ],
+            "inputs": {
+              "parameters": {
+                "DATASET_NAME": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "azure_vm_pdm"
+                    }
+                  }
+                },
+                "GOOGLE_APPLICATION_CREDENTIALS": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "/Users/andrew/Continual/delivery-examples/GCP-Vertex/data/continual-dev-aef3ddfaa866.json"
+                    }
+                  }
+                },
+                "GOOGLE_CLOUD_PROJECT": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "continual-dev"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "dbt-run"
+            }
+          },
+          "load-feature-store": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-load-feature-store"
+            },
+            "dependentTasks": [
+              "dbt-run"
+            ],
+            "inputs": {
+              "parameters": {
+                "DATASET_NAME": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "azure_vm_pdm"
+                    }
+                  }
+                },
+                "GOOGLE_CLOUD_PROJECT": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "continual-dev"
+                    }
+                  }
+                },
+                "PREDICTION_PERIOD": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "7day"
+                    }
+                  }
+                },
+                "VERTEX_REGION": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "us-central1"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "load-feature-store"
+            }
+          },
           "tabular-dataset-create": {
             "cachingOptions": {
               "enableCache": true
@@ -820,12 +1073,15 @@
             "componentRef": {
               "name": "comp-tabular-dataset-create"
             },
+            "dependentTasks": [
+              "load-feature-store"
+            ],
             "inputs": {
               "parameters": {
                 "bq_source": {
                   "runtimeValue": {
                     "constantValue": {
-                      "stringValue": "bq://continual-dev.azure_vm_testing.training_data"
+                      "stringValue": "bq://continual-dev.azure_vm_pdm.training_data"
                     }
                   }
                 },
@@ -906,7 +1162,7 @@
     "sdkVersion": "kfp-1.8.14"
   },
   "runtimeConfig": {
-    "gcsOutputDirectory": "gs://continual-dev-vertex-dbt-bucket/pipeline_root",
+    "gcsOutputDirectory": "gs://vertex-dbt-bucket/pipeline_root",
     "parameters": {
       "MACHINE_TYPE": {
         "stringValue": "n1-standard-4"

@@ -10,13 +10,16 @@ def cleanup():
         delete_contents: bool = True,
         not_found_ok: bool = True,
     ):
-        
-        client = bigquery.Client()
+        try: 
+            client = bigquery.Client()
 
-        client.delete_dataset(
-            dataset_id, delete_contents=delete_contents, not_found_ok=not_found_ok
-        )
-        print("Deleted dataset '{}'.".format(dataset_id))
+            client.delete_dataset(
+                dataset_id, delete_contents=delete_contents, not_found_ok=not_found_ok
+            )
+            print("Deleted dataset '{}'.".format(dataset_id))
+
+        except Exception as error:
+            print(error)
 
     def delete_featurestore(
         project: str,
@@ -26,10 +29,14 @@ def cleanup():
         force: bool = True,
     ):
 
-        aiplatform.init(project=project, location=location)
-        
-        fs = aiplatform.featurestore.Featurestore(featurestore_name=featurestore_name)
-        fs.delete(sync=sync, force=force)
+        try: 
+            aiplatform.init(project=project, location=location)
+            
+            fs = aiplatform.featurestore.Featurestore(featurestore_name=featurestore_name)
+            fs.delete(sync=sync, force=force)
+
+        except Exception as error:
+            print(error)
 
     def delete_pipeline_job(
         project: str,
@@ -38,16 +45,20 @@ def cleanup():
         sync: bool = True,
     ):
         
-        aiplatform.init(project=project, location=location)
-        
-        # Retreive pipeline jobs that match name
-        pipeline_jobs = aiplatform.PipelineJob.list(
-            filter=f"display_name={pipeline_display_name}", order_by="create_time"
-        )
+        try: 
+            aiplatform.init(project=project, location=location)
+            
+            # Retreive pipeline jobs that match name
+            pipeline_jobs = aiplatform.PipelineJob.list(
+                filter=f"display_name={pipeline_display_name}", order_by="create_time"
+            )
 
-        if len(pipeline_jobs) > 0:
-            pipeline_job = pipeline_jobs[0]
-            pipeline_job.delete(sync=sync)
+            if len(pipeline_jobs) > 0:
+                pipeline_job = pipeline_jobs[0]
+                pipeline_job.delete(sync=sync)
+
+        except Exception as error:
+            print(error)
     
     def delete_endpoint(
         project: str,
@@ -56,16 +67,20 @@ def cleanup():
         force: bool = True,
     ):
 
-        aiplatform.init(project=project, location=location)
+        try: 
+            aiplatform.init(project=project, location=location)
 
-        # Retrieve endpoints that match name
-        endpoints = aiplatform.Endpoint.list(
-            filter=f"display_name={endpoint_name}", order_by="create_time"
-        )
+            # Retrieve endpoints that match name
+            endpoints = aiplatform.Endpoint.list(
+                filter=f"display_name={endpoint_name}", order_by="create_time"
+            )
 
-        if len(endpoints) > 0:
-            endpoint = endpoints[0]
-            endpoint.delete(force=force)
+            if len(endpoints) > 0:
+                endpoint = endpoints[0]
+                endpoint.delete(force=force)
+        
+        except Exception as error:
+            print(error)
     
     def delete_model(
         project: str,
@@ -73,16 +88,20 @@ def cleanup():
         model_name: str,
     ):
 
-        aiplatform.init(project=project, location=location)
+        try: 
+            aiplatform.init(project=project, location=location)
 
-        # Retrieve models that match name
-        models = aiplatform.Model.list(
-            filter=f"display_name={model_name}", order_by="create_time"
-        )
+            # Retrieve models that match name
+            models = aiplatform.Model.list(
+                filter=f"display_name={model_name}", order_by="create_time"
+            )
 
-        if len(models) > 0:
-            model = models[0]
-            model.delete()
+            if len(models) > 0:
+                model = models[0]
+                model.delete()
+
+        except Exception as error:
+            print(error)
 
     def delete_vertex_dataset(
         project: str,
@@ -90,32 +109,35 @@ def cleanup():
         vertex_dataset: str,
     ):
 
-        aiplatform.init(project=project, location=location)
+        try: 
+            aiplatform.init(project=project, location=location)
 
-        # Retrieve Vertex datasets that match name
-        datasets = aiplatform.TabularDataset.list(
-            filter=f"display_name={vertex_dataset}", order_by="create_time"
-        )
+            # Retrieve Vertex datasets that match name
+            datasets = aiplatform.TabularDataset.list(
+                filter=f"display_name={vertex_dataset}", order_by="create_time"
+            )
 
-        if len(datasets) > 0:
-            dataset = datasets[0]
-            dataset.delete()
+            if len(datasets) > 0:
+                dataset = datasets[0]
+                dataset.delete()
+
+        except Exception as error:
+            print(error)
         
     def delete_GCS_bucket(
         bucket_name: str,
-        delete: bool = False
+        force_delete: bool = False
     ):
 
         try: 
             storage_client = storage.Client()
             bucket = storage_client.get_bucket(bucket_name)
-
-            if delete:
-                bucket.delete()
-                print(f"Bucket {bucket.name} deleted")
+           
+            bucket.delete(force=force_delete)
+            print(f"Bucket {bucket.name} deleted")
         
-        except:
-            print("Bucket doesn't exist")
+        except Exception as error:
+            print(error)
 
     # Initialize variables
     project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
@@ -127,7 +149,7 @@ def cleanup():
     model_name = os.getenv('MODEL_DISPLAY_NAME')
     vertex_dataset = os.getenv('VERTEX_DATASET_NAME')
     bucket_name = os.getenv('BUCKET_NAME')
-    delete_bucket = os.getenv('DELETE_BUCKET')
+    force_delete = os.getenv('FORCE_DELETE_BUCKET')
 
 
     # Delete stuff
@@ -137,7 +159,7 @@ def cleanup():
     delete_endpoint(project_id, region, endpoint_name)
     delete_model(project_id, region, model_name)
     delete_vertex_dataset(project_id, region, vertex_dataset)
-    delete_GCS_bucket(bucket_name, delete_bucket)
+    delete_GCS_bucket(bucket_name, force_delete)
 
 if __name__ == "__main__":
 

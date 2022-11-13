@@ -1,6 +1,6 @@
 import os
 import datetime
-from typing import List, Union, Optional, NamedTuple
+from typing import List, Union, Optional
 
 from google.cloud import aiplatform
 
@@ -57,13 +57,13 @@ def load_data_into_featurestore() -> str:
         )
 
     def batch_serve_features_to_bq(
-    featurestore_name: str,
-    bq_destination_output_uri: str,
-    read_instances_uri: str,
-    serving_feature_ids: object,
-    pass_through_fields: Optional[List[str]] = None,
-    sync: bool = True,
-):
+        featurestore_name: str,
+        bq_destination_output_uri: str,
+        read_instances_uri: str,
+        serving_feature_ids: object,
+        pass_through_fields: Optional[List[str]] = None,
+        sync: bool = True,
+    ):
 
         fs = aiplatform.featurestore.Featurestore(featurestore_name=featurestore_name)
 
@@ -419,7 +419,7 @@ def load_data_into_featurestore() -> str:
 
     # Serving features to final training dataset stored on BigQuery with model spine and features from feature store as input
 
-    # Output table. Note: This table may need to be dropped and recreated if updated as BatchReadFeatureValues API may not be able to overwrite existing tables.
+    # Output table. Note: This table may need to be dropped first when updating as BatchReadFeatureValues API may not be able to overwrite existing tables.
     FINAL_TRAINING_TABLE = "training_data"
     
     destination_table_uri = BQ_PATTERN.format(
@@ -434,7 +434,6 @@ def load_data_into_featurestore() -> str:
     )
 
     # Pulling all features from previously created entity types / feature sets
-
     serving_feature_ids = {
         "vm_errors": ['*'],
         "vm_failures": ['*'],
@@ -444,6 +443,7 @@ def load_data_into_featurestore() -> str:
         "vm_telemetry": ['*'],     
     }
 
+    # Serve features to create final training dataset called "training" in BQ (under same project.dataset location)
     batch_serve_features_to_bq(fs_id, destination_table_uri, read_instance_uri, serving_feature_ids, pass_through_fields)
     
     # Return path to training dataset for use by downstream pipeline components

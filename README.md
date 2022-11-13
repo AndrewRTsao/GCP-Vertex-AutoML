@@ -28,4 +28,6 @@ source env.sh
 python run_pipeline.py
 ```
 
+*NOTE: Pipeline will take approximately 4 hours to complete*
+
 6. (Optional) If you would like, run the **cleanup.py** script once you're done and if don't need the underlying BQ dataset, feature store, and model anymore.
