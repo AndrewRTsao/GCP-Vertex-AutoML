@@ -77,6 +77,7 @@ def cleanup():
 
             if len(endpoints) > 0:
                 endpoint = endpoints[0]
+                endpoint.undeploy_all() # undeploy models before deleting
                 endpoint.delete(force=force)
         
         except Exception as error:
