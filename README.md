@@ -28,7 +28,7 @@ source env.sh
 . ./build_image.sh
 ```
 
-7. Run the **run_pipeline.py** script to trigger the prepackaged Vertex AI pipeline (ingests the data into BigQuery from step 1, dbt run, creates and pushes features into Vertex feature store, trains the model using Vertex AutoML, evaluates the model, and then finally deploys the model to a Vertex endpoint if a certain threshold has been met).
+7. Run the **run_pipeline.py** script to trigger the prepackaged Vertex AI pipeline (ingests the data into BigQuery from Step 1, dbt run, creates and pushes features into Vertex feature store, trains the model using Vertex AutoML, evaluates the model, and then finally deploys the model to a Vertex endpoint if a certain threshold has been met).
 
 ```sh
 python run_pipeline.py
@@ -37,5 +37,9 @@ python run_pipeline.py
 *NOTE: Pipeline will take approximately 4 hours to complete*
 
 8. (Optional) If you would like, run the **cleanup.py** script once you're done and if you don't need the underlying BQ dataset, feature store, model, and/or other Vertex AI resources anymore.
+
+```sh
+python src/cleanup.py
+```
 
 (Note: You may need to undeploy the model first from the endpoint before being able to delete it)

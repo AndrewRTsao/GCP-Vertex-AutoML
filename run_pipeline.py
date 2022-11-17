@@ -201,7 +201,6 @@ def run_pipeline():
         dbt_op = dbt_component(project_id, dataset_name, credentials, profiles_path)
         
         feature_store_op = feature_store_component(project_id, dataset_name, region, prediction_period)
-
         
         BQ_PATTERN = "bq://{project}.{dataset}.{table}" # To help construct BQ URI for bq_source
         bq_source = BQ_PATTERN.format(
@@ -223,7 +222,6 @@ def run_pipeline():
             target_column="failure_in_" + prediction_period,
             predefined_split_column_name="split",
         )
-        
 
         eval_model_op = classification_model_eval_metrics(
             project,
