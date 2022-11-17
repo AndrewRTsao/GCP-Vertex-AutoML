@@ -20,13 +20,15 @@ pip install --trusted-host pypip.python.org -r requirements.txt
 source env.sh
 ```
 
-5. Run the **build_image.sh** script to build the component container image and push it to the Artifact Registry (make sure your Docker daemon is running locally).
+5. Make sure that have setup your [gcloud CLI](https://cloud.google.com/sdk/docs/initializing), including [authorizing your service account](https://cloud.google.com/sdk/gcloud/reference/auth/activate-service-account) and/or [switching to an active account](https://cloud.google.com/sdk/docs/authorizing#switch_the_active_account) that you'd like to use that has the correct privileges / permissions. 
+
+6. Run the **build_image.sh** script to build the component container image and push it to the Artifact Registry (make sure your Docker daemon is running locally).
 
 ```sh
 . ./build_image.sh
 ```
 
-6. Run the **run_pipeline.py** script to trigger the prepackaged Vertex AI pipeline (ingests the data into BigQuery from step 1, dbt run, creates and pushes features into Vertex feature store, trains the model using Vertex AutoML, evaluates the model, and then finally deploys the model to a Vertex endpoint if a certain threshold has been met).
+7. Run the **run_pipeline.py** script to trigger the prepackaged Vertex AI pipeline (ingests the data into BigQuery from step 1, dbt run, creates and pushes features into Vertex feature store, trains the model using Vertex AutoML, evaluates the model, and then finally deploys the model to a Vertex endpoint if a certain threshold has been met).
 
 ```sh
 python run_pipeline.py
@@ -34,6 +36,6 @@ python run_pipeline.py
 
 *NOTE: Pipeline will take approximately 4 hours to complete*
 
-7. (Optional) If you would like, run the **cleanup.py** script once you're done and if you don't need the underlying BQ dataset, feature store, model, and/or other Vertex AI resources anymore.
+8. (Optional) If you would like, run the **cleanup.py** script once you're done and if you don't need the underlying BQ dataset, feature store, model, and/or other Vertex AI resources anymore.
 
 (Note: You may need to undeploy the model first from the endpoint before being able to delete it)
