@@ -34,6 +34,7 @@ RUN pip install --trusted-host pypip.python.org -r requirements.txt
 
 # Changing work directory to dbt project
 WORKDIR ${LOCAL_PATH}/dbt
+RUN dbt deps
 
 CMD ["bash"]
 

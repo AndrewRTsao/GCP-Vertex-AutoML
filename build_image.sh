@@ -6,7 +6,7 @@ IMAGE="vertex-${DOCKER_REPO}-dbt:latest"
 # Create repo in the artifact registry
 gcloud beta artifacts repositories create ${DOCKER_REPO} \
  --repository-format=docker \
- --location=${VERTEX_REGION}
+ --project=${GOOGLE_CLOUD_PROJECT} --location=${VERTEX_REGION}
 
 # Configure Docker
 gcloud auth configure-docker ${VERTEX_REGION}-docker.pkg.dev

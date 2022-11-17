@@ -196,7 +196,10 @@ def run_pipeline():
         
         # Creating component ops for pipeline
         data_ingest_op = data_ingestion_component(input_gcs_path, project_id, dataset_name, dataset_location)
-        dbt_op = dbt_component(project_id, dataset_name, credentials)
+        
+        profiles_path = os.getenv("LOCAL_PROJECT") + "/dbt" # Retrieving path of profiles.yml (should be in /project/dbt folder)
+        dbt_op = dbt_component(project_id, dataset_name, credentials, profiles_path)
+        
         feature_store_op = feature_store_component(project_id, dataset_name, region, prediction_period)
 
         
